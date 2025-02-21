@@ -181,6 +181,55 @@ function updateKeyboard(letter, className) {
     }
 }
 
+function showEndGameModal(won) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+
+    const title = document.createElement('h2');
+    const message = document.createElement('p');
+    const button = document.createElement('button');
+    button.textContent = 'Nieuw spel';
+    button.onclick = () => {
+        // Reset game state
+        currentWord = '';
+        currentRow = 0;
+        gameOver = false;
+        
+        // Clear the board
+        const board = document.getElementById('board');
+        board.innerHTML = '';
+        initBoard();
+
+        // Reset keyboard
+        const keyboard = document.getElementById('keyboard');
+        keyboard.innerHTML = '';
+        initKeyboard();
+
+        // Get new target word
+        targetWord = WORD_LIST.getRandomAnswer();
+
+        // Remove modal
+        overlay.remove();
+    };
+
+    if (won) {
+        title.textContent = 'Gefeliciteerd!';
+        message.textContent = `Je hebt het woord ${targetWord} geraden in ${currentRow + 1} ${currentRow === 0 ? 'beurt' : 'beurten'}!`;
+    } else {
+        title.textContent = 'Helaas!';
+        message.textContent = `Het woord was ${targetWord}`;
+    }
+
+    modal.appendChild(title);
+    modal.appendChild(message);
+    modal.appendChild(button);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+}
+
 function checkWord() {
     if (!WORD_LIST.isValidGuess(currentWord)) {
         const row = document.getElementsByClassName('row')[currentRow];
@@ -238,7 +287,7 @@ function checkWord() {
             gameState.maxStreak = Math.max(gameState.maxStreak, gameState.currentStreak);
             gameState.gamesWon++;
             saveGameState();
-            showMessage('Gefeliciteerd!');
+            showEndGameModal(true);
         }, WORD_LENGTH * 100 + 500);
         return;
     }
@@ -251,7 +300,7 @@ function checkWord() {
             gameOver = true;
             gameState.currentStreak = 0;
             saveGameState();
-            showMessage(`Het woord was ${targetWord}`);
+            showEndGameModal(false);
         }, WORD_LENGTH * 100 + 500);
     }
 }
