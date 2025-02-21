@@ -10,9 +10,16 @@ const KEYBOARD_LETTERS = [
 let currentWord = '';
 let currentRow = 0;
 let gameOver = false;
+let targetWord = DUTCH_WORDS[Math.floor(Math.random() * DUTCH_WORDS.length)];
 
-// You can replace this with an API call to get random words
-const targetWord = 'HELLO';
+// Theme toggling
+const themeToggle = document.getElementById('theme-toggle');
+themeToggle.addEventListener('click', () => {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+});
 
 function initBoard() {
     const board = document.getElementById('board');
@@ -65,6 +72,7 @@ function handleKeyClick(letter) {
     } else if (currentWord.length < WORD_LENGTH) {
         currentWord += letter;
         updateBoard();
+        animateTilePop(currentRow, currentWord.length - 1);
     }
 }
 
@@ -75,6 +83,30 @@ function updateBoard() {
     for (let i = 0; i < WORD_LENGTH; i++) {
         tiles[i].textContent = currentWord[i] || '';
     }
+}
+
+function animateTilePop(row, col) {
+    const tile = document.getElementsByClassName('row')[row]
+        .getElementsByClassName('tile')[col];
+    tile.classList.add('pop');
+    setTimeout(() => tile.classList.remove('pop'), 150);
+}
+
+function animateTileFlip(tile, delay, className) {
+    setTimeout(() => {
+        tile.classList.add('flip');
+        setTimeout(() => {
+            tile.classList.add(className);
+        }, 250);
+    }, delay);
+}
+
+function shakeRow(row) {
+    const tiles = row.getElementsByClassName('tile');
+    Array.from(tiles).forEach(tile => {
+        tile.classList.add('shake');
+        setTimeout(() => tile.classList.remove('shake'), 500);
+    });
 }
 
 function checkWord() {
@@ -90,18 +122,20 @@ function checkWord() {
         const tile = tiles[i];
         
         if (letter === targetWord[i]) {
-            tile.classList.add('correct');
+            animateTileFlip(tile, i * 100, 'correct');
             correct++;
         } else if (targetWord.includes(letter)) {
-            tile.classList.add('present');
+            animateTileFlip(tile, i * 100, 'present');
         } else {
-            tile.classList.add('absent');
+            animateTileFlip(tile, i * 100, 'absent');
         }
     }
 
     if (correct === WORD_LENGTH) {
-        gameOver = true;
-        alert('Congratulations! You won!');
+        setTimeout(() => {
+            gameOver = true;
+            alert('Gefeliciteerd! Je hebt gewonnen!');
+        }, WORD_LENGTH * 100 + 500);
         return;
     }
 
@@ -109,8 +143,10 @@ function checkWord() {
     currentWord = '';
 
     if (currentRow === TRIES) {
-        gameOver = true;
-        alert(`Game Over! The word was ${targetWord}`);
+        setTimeout(() => {
+            gameOver = true;
+            alert(`Game Over! Het woord was ${targetWord}`);
+        }, WORD_LENGTH * 100 + 500);
     }
 }
 

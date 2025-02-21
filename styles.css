@@ -1,68 +1,185 @@
 /* styles.css */
+:root {
+    --bg-primary: #121213;
+    --bg-secondary: #1a1a1b;
+    --text-primary: #ffffff;
+    --tile-border: #3a3a3c;
+    --key-bg: #818384;
+    --correct: #538d4e;
+    --present: #b59f3b;
+    --absent: #3a3a3c;
+}
+
+[data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f6f7f8;
+    --text-primary: #1a1a1b;
+    --tile-border: #d3d6da;
+    --key-bg: #d3d6da;
+    --correct: #6aaa64;
+    --present: #c9b458;
+    --absent: #787c7e;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.gradient {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at top right, rgba(121, 68, 154, 0.13), transparent),
+                radial-gradient(circle at bottom left, rgba(41, 196, 255, 0.13), transparent);
+}
+
 .game-container {
-     display: flex;
-     flex-direction: column;
-     align-items: center;
-     padding: 20px;
- }
- 
- #board {
-     display: grid;
-     grid-template-rows: repeat(6, 1fr);
-     gap: 5px;
-     margin-bottom: 30px;
- }
- 
- .row {
-     display: grid;
-     grid-template-columns: repeat(5, 1fr);
-     gap: 5px;
- }
- 
- .tile {
-     width: 60px;
-     height: 60px;
-     border: 2px solid #ccc;
-     display: flex;
-     justify-content: center;
-     align-items: center;
-     font-size: 2rem;
-     font-weight: bold;
-     text-transform: uppercase;
- }
- 
- #keyboard {
-     display: grid;
-     grid-template-rows: repeat(3, 1fr);
-     gap: 5px;
- }
- 
- .keyboard-row {
-     display: flex;
-     justify-content: center;
-     gap: 5px;
- }
- 
- .key {
-     padding: 10px 15px;
-     border: none;
-     border-radius: 5px;
-     background-color: #d3d6da;
-     cursor: pointer;
-     font-weight: bold;
- }
- 
- .correct {
-     background-color: #6aaa64;
-     color: white;
- }
- 
- .present {
-     background-color: #c9b458;
-     color: white;
- }
- 
- .absent {
-     background-color: #787c7e;
-     color: white;
- }
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+#theme-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.sun-icon {
+    width: 24px;
+    height: 24px;
+    fill: var(--text-primary);
+}
+
+#board {
+    display: grid;
+    grid-template-rows: repeat(6, 1fr);
+    gap: 5px;
+    margin-bottom: 30px;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+}
+
+.tile {
+    aspect-ratio: 1;
+    border: 2px solid var(--tile-border);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    user-select: none;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.tile.pop {
+    transform: scale(1.1);
+}
+
+.tile.flip {
+    transform: rotateX(360deg);
+    transition: transform 0.6s ease;
+}
+
+.tile.shake {
+    animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+#keyboard {
+    display: grid;
+    grid-template-rows: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.keyboard-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+}
+
+.key {
+    padding: 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--key-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 1.1rem;
+    transition: transform 0.1s ease, background-color 0.3s ease;
+}
+
+.key:hover {
+    transform: translateY(-2px);
+}
+
+.key:active {
+    transform: translateY(0);
+}
+
+.correct {
+    background-color: var(--correct) !important;
+    border-color: var(--correct) !important;
+    color: white;
+}
+
+.present {
+    background-color: var(--present) !important;
+    border-color: var(--present) !important;
+    color: white;
+}
+
+.absent {
+    background-color: var(--absent) !important;
+    border-color: var(--absent) !important;
+    color: white;
+}
