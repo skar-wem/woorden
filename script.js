@@ -10,16 +10,69 @@ const KEYBOARD_LETTERS = [
 let currentWord = '';
 let currentRow = 0;
 let gameOver = false;
-let targetWord = DUTCH_WORDS[Math.floor(Math.random() * DUTCH_WORDS.length)];
+let targetWord = '';
+let isLoading = true;
 
-// Theme toggling
+// Game state
+const gameState = {
+    guesses: [],
+    keyStates: {},
+    gameOver: false,
+    won: false,
+    currentStreak: 0,
+    maxStreak: 0,
+    gamesPlayed: 0,
+    gamesWon: 0
+};
+
+// Initialize loading screen
+function showLoading() {
+    const loading = document.createElement('div');
+    loading.className = 'loading';
+    loading.innerHTML = '<div class="loading-spinner"></div>';
+    document.body.appendChild(loading);
+}
+
+function hideLoading() {
+    const loading = document.querySelector('.loading');
+    if (loading) {
+        loading.remove();
+    }
+    isLoading = false;
+}
+
+// Theme handling
 const themeToggle = document.getElementById('theme-toggle');
 themeToggle.addEventListener('click', () => {
     const html = document.documentElement;
     const currentTheme = html.getAttribute('data-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
 });
+
+// Load saved theme
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+}
+
+async function initGame() {
+    showLoading();
+    
+    // Initialize word list
+    await WORD_LIST.initialize();
+    targetWord = WORD_LIST.getRandomAnswer();
+    
+    // Initialize board and keyboard
+    initBoard();
+    initKeyboard();
+    
+    // Load saved game state
+    loadGameState();
+    
+    hideLoading();
+}
 
 function initBoard() {
     const board = document.getElementById('board');
@@ -49,6 +102,7 @@ function initKeyboard() {
             const key = document.createElement('button');
             key.className = 'key';
             key.textContent = letter;
+            key.setAttribute('data-key', letter);
             key.addEventListener('click', () => handleKeyClick(letter));
             keyboardRow.appendChild(key);
         });
@@ -58,8 +112,17 @@ function initKeyboard() {
 }
 
 function handleKeyClick(letter) {
-    if (gameOver) return;
+    if (gameOver || isLoading) return;
     
+    // Add visual feedback
+    const key = document.querySelector(`.key[data-key="${letter}"]`);
+    if (key) {
+        key.classList.add('pressed', 'active');
+        setTimeout(() => {
+            key.classList.remove('pressed', 'active');
+        }, 100);
+    }
+
     if (letter === '⌫') {
         if (currentWord.length > 0) {
             currentWord = currentWord.slice(0, -1);
@@ -68,6 +131,8 @@ function handleKeyClick(letter) {
     } else if (letter === 'Enter') {
         if (currentWord.length === WORD_LENGTH) {
             checkWord();
+        } else {
+            showMessage('Te weinig letters');
         }
     } else if (currentWord.length < WORD_LENGTH) {
         currentWord += letter;
@@ -109,32 +174,71 @@ function shakeRow(row) {
     });
 }
 
+function updateKeyboard(letter, className) {
+    const key = document.querySelector(`.key[data-key="${letter}"]`);
+    if (key) {
+        key.classList.add(className);
+    }
+}
+
 function checkWord() {
+    if (!WORD_LIST.isValidGuess(currentWord)) {
+        const row = document.getElementsByClassName('row')[currentRow];
+        shakeRow(row);
+        showMessage('Niet in woordenlijst');
+        return;
+    }
+
     const row = document.getElementsByClassName('row')[currentRow];
     const tiles = row.getElementsByClassName('tile');
     
     let correct = 0;
-    const letterState = {};
+    const letterCounts = {};
+    
+    // Count letters in target word
+    for (const letter of targetWord) {
+        letterCounts[letter] = (letterCounts[letter] || 0) + 1;
+    }
 
-    // Check for correct letters
+    // First pass: Check for correct positions
     for (let i = 0; i < WORD_LENGTH; i++) {
         const letter = currentWord[i];
-        const tile = tiles[i];
-        
         if (letter === targetWord[i]) {
-            animateTileFlip(tile, i * 100, 'correct');
             correct++;
-        } else if (targetWord.includes(letter)) {
-            animateTileFlip(tile, i * 100, 'present');
-        } else {
-            animateTileFlip(tile, i * 100, 'absent');
+            letterCounts[letter]--;
+            animateTileFlip(tiles[i], i * 100, 'correct');
+            updateKeyboard(letter, 'correct');
         }
     }
+
+    // Second pass: Check for present letters
+    for (let i = 0; i < WORD_LENGTH; i++) {
+        const letter = currentWord[i];
+        if (letter !== targetWord[i]) {
+            if (letterCounts[letter] > 0) {
+                letterCounts[letter]--;
+                animateTileFlip(tiles[i], i * 100, 'present');
+                updateKeyboard(letter, 'present');
+            } else {
+                animateTileFlip(tiles[i], i * 100, 'absent');
+                updateKeyboard(letter, 'absent');
+            }
+        }
+    }
+
+    // Update game state
+    gameState.guesses.push(currentWord);
+    saveGameState();
 
     if (correct === WORD_LENGTH) {
         setTimeout(() => {
             gameOver = true;
-            alert('Gefeliciteerd! Je hebt gewonnen!');
+            gameState.won = true;
+            gameState.currentStreak++;
+            gameState.maxStreak = Math.max(gameState.maxStreak, gameState.currentStreak);
+            gameState.gamesWon++;
+            saveGameState();
+            showMessage('Gefeliciteerd!');
         }, WORD_LENGTH * 100 + 500);
         return;
     }
@@ -145,17 +249,40 @@ function checkWord() {
     if (currentRow === TRIES) {
         setTimeout(() => {
             gameOver = true;
-            alert(`Game Over! Het woord was ${targetWord}`);
+            gameState.currentStreak = 0;
+            saveGameState();
+            showMessage(`Het woord was ${targetWord}`);
         }, WORD_LENGTH * 100 + 500);
     }
 }
 
-// Initialize the game
-initBoard();
-initKeyboard();
+function showMessage(text) {
+    const message = document.createElement('div');
+    message.className = 'message';
+    message.textContent = text;
+    document.body.appendChild(message);
+    
+    setTimeout(() => {
+        message.classList.add('fade-out');
+        setTimeout(() => message.remove(), 300);
+    }, 1000);
+}
 
-// Add keyboard support
+function saveGameState() {
+    localStorage.setItem('gameState', JSON.stringify(gameState));
+}
+
+function loadGameState() {
+    const savedState = localStorage.getItem('gameState');
+    if (savedState) {
+        Object.assign(gameState, JSON.parse(savedState));
+    }
+}
+
+// Keyboard input handling
 document.addEventListener('keydown', (e) => {
+    if (isLoading) return;
+    
     if (e.key === 'Backspace') {
         handleKeyClick('⌫');
     } else if (e.key === 'Enter') {
@@ -167,3 +294,10 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+console.log('Number of valid words:', WORD_LIST.valid.size);
+console.log('Number of possible answers:', WORD_LIST.answers.length);
+console.log('Target word:', targetWord);
+
+// Initialize the game when the page loads
+document.addEventListener('DOMContentLoaded', initGame);
